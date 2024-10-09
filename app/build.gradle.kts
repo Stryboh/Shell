@@ -9,8 +9,9 @@ android {
 
     defaultConfig {
         applicationId = "org.stryboh.shell"
-        minSdk = 30
-        targetSdk = 34
+        minSdk = 28
+        //noinspection ExpiredTargetSdkVersion
+        targetSdk = 28
         versionCode = 1
         versionName = "1.0"
 
@@ -19,7 +20,11 @@ android {
             useSupportLibrary = true
         }
     }
-
+    sourceSets{
+        getByName("main"){
+            assets.srcDir("src/main/assets")
+        }
+    }
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -67,6 +72,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.drawerlayout)
+    implementation(libs.material)
+    implementation(libs.androidx.fragment)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
