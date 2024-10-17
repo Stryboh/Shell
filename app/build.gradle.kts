@@ -76,6 +76,9 @@ dependencies {
     implementation(libs.androidx.drawerlayout)
     implementation(libs.material)
     implementation(libs.androidx.fragment)
+
+    implementation (libs.material.v130alpha03)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

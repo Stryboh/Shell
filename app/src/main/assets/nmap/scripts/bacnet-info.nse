@@ -1309,7 +1309,7 @@ function field_size(packet)
     return info
   elseif charset == 4 then -- UCS-2 big-endian
     return unicode.transcode(info, unicode.utf16_dec, unicode.utf8_enc, true, nil)
-  else -- TODO: other encodings not supported by unicode.lua
+  else --   TODO: other encodings not supported by unicode.lua
     return info
   end
 end
