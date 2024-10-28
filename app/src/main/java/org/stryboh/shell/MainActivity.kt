@@ -15,6 +15,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var actionBarDrawerToggle: ActionBarDrawerToggle
     private lateinit var navigationView: NavigationView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         unpackAssets()
@@ -32,22 +33,18 @@ class MainActivity : AppCompatActivity() {
                     loadFragment(ShellFragment())
                     true
                 }
-
                 R.id.nav_gui -> {
                     loadFragment(GUIFragment())
                     true
                 }
-
                 else -> false
             }
         }
-        // Shell fragment loaded by default
         if (savedInstanceState == null) {
             loadFragment(ShellFragment())
         }
     }
-
-    // Fragments replacer
+    
     private fun loadFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, fragment)

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <!-- Host Icon -->
+    <ImageView
+        android:id="@+id/host_icon"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_computer" />
+
+    <!-- Host Name -->
+    <TextView
+        android:id="@+id/host_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@android:color/black"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
+
+    <!-- Host IP -->
+    <TextView
+        android:id="@+id/host_ip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="@android:color/darker_gray"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
+</LinearLayout>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Edit Host Name -->
+    <EditText
+        android:id="@+id/edit_host_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Host Name"
+        android:textColorHint="@android:color/darker_gray" />
+
+    <!-- Edit Host IP -->
+    <EditText
+        android:id="@+id/edit_host_ip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Host IP"
+        android:textColorHint="@android:color/darker_gray"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>
