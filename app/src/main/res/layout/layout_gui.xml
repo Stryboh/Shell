@@ -2,18 +2,74 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <Button
-        android:id="@+id/link_mode_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Link hosts"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="16dp"/>
-
     <org.stryboh.shell.HostView
         android:id="@+id/host_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/link_mode_button"/>
+        android:layout_above="@+id/button_container" />
+
+    <LinearLayout
+        android:id="@+id/button_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_alignParentBottom="true"
+        android:gravity="center_horizontal"
+        android:background="@color/dark_gray"
+        android:layout_marginBottom="15dp">
+
+        <ImageButton
+            android:id="@+id/add_mode_button"
+            android:src="@drawable/ic_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/remove_mode_button"
+            android:src="@drawable/ic_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/view_mode_button"
+            android:src="@drawable/ic_eye"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/link_mode_button"
+            android:src="@drawable/ic_link"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/save_button"
+            android:src="@drawable/ic_save"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
+            android:id="@+id/load_button"
+            android:src="@drawable/ic_load"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+    </LinearLayout>
 </RelativeLayout>

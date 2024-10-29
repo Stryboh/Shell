@@ -21,41 +21,47 @@ class ShellFragment : Fragment() {
     private lateinit var clearButton: Button
     private lateinit var ipText: EditText
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View? {
         requireActivity().title = "Shell"
-        // Inflate the layout
         val view = inflater.inflate(R.layout.layout_shell, container, false)
         outputText = view.findViewById(R.id.text_output)
         scanButton = view.findViewById(R.id.button_run)
         clearButton = view.findViewById(R.id.button_clear)
         ipText = view.findViewById(R.id.text_ip)
+
         scanButton.setOnClickListener {
             val cmd = ipText.text.toString()
             val command =
                 "su --mount-master -c export PATH=\$PATH:/data/data/org.stryboh.shell/files/nmap/; $cmd"
             startNmapScan(command)
         }
+
         clearButton.setOnClickListener {
             outputText.text = ""
         }
+
         return view
     }
 
     private fun startNmapScan(command: String) {
         coroutineScope.launch {
+
             try {
                 val process = Runtime.getRuntime().exec(command)
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
                 var line: String?
+
                 while (reader.readLine().also { line = it } != null) {
                     withContext(Dispatchers.Main) {
                         outputText.append("\n$line")
                     }
                 }
+
                 while (errorReader.readLine().also { line = it } != null) {
                     withContext(Dispatchers.Main) {
                         outputText.append("\n$line")
