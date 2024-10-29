@@ -59,14 +59,14 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         
         val paint = Paint().apply {
             color = Color.BLACK
-            textSize = 30f 
+            textSize = 40f
             textAlign = Paint.Align.CENTER
         }
 
         
-        canvas.drawText(host.hostName, host.x, host.y + 60, paint) 
+        canvas.drawText(host.hostName, host.x, host.y + 90, paint)
         
-        canvas.drawText(host.hostIP, host.x, host.y + 80, paint) 
+        canvas.drawText(host.hostIP, host.x, host.y + 130, paint)
     }
 
     fun addHost(host: Host) {
@@ -87,8 +87,8 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
     data class Host(var x: Float, var y: Float, var hostName: String = "", var hostIP: String = "") {
         fun contains(px: Float, py: Float): Boolean {
-            val halfWidth = 50f 
-            val halfHeight = 50f 
+            val halfWidth = 60f
+            val halfHeight = 60f
             return (px >= x - halfWidth && px <= x + halfWidth && py >= y - halfHeight && py <= y + halfHeight)
         }
     }
