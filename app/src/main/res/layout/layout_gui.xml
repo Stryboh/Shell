@@ -55,6 +55,15 @@
             android:padding="8dp" />
 
         <ImageButton
+            android:id="@+id/remove_link_mode_button"
+            android:src="@drawable/ic_link_remove"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
+        <ImageButton
             android:id="@+id/save_button"
             android:src="@drawable/ic_save"
             android:layout_width="wrap_content"

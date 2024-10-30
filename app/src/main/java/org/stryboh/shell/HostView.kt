@@ -25,7 +25,8 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         ADD,
         LINK,
         VIEW,
-        REMOVE 
+        REMOVE,
+        REMOVE_LINK
     }
 
     var currentMode = Mode.ADD

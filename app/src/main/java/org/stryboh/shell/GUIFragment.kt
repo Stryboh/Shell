@@ -25,6 +25,7 @@ class GUIFragment : Fragment() {
     private lateinit var viewModeButton: ImageButton
     private lateinit var addModeButton: ImageButton
     private lateinit var removeModeButton: ImageButton
+    private lateinit var removeLinkModeButton: ImageButton
     private lateinit var linkModeButton: ImageButton
     private lateinit var saveButton: ImageButton
     private lateinit var loadButton: ImageButton
@@ -54,6 +55,7 @@ class GUIFragment : Fragment() {
         viewModeButton = view.findViewById(R.id.view_mode_button)
         addModeButton = view.findViewById(R.id.add_mode_button)
         removeModeButton = view.findViewById(R.id.remove_mode_button)
+        removeLinkModeButton = view.findViewById(R.id.remove_link_mode_button)
         linkModeButton = view.findViewById(R.id.link_mode_button)
 
 
@@ -63,7 +65,6 @@ class GUIFragment : Fragment() {
         loadButton.setOnClickListener {
             showFileSelectionDialog()
         }
-
         viewModeButton.setOnClickListener {
             requireActivity().title = "GUI/View mode"
             hostView.currentMode = HostView.Mode.VIEW
@@ -75,6 +76,10 @@ class GUIFragment : Fragment() {
         removeModeButton.setOnClickListener {
             hostView.currentMode = HostView.Mode.REMOVE
             requireActivity().title = "GUI/Remove hosts mode"
+        }
+        removeLinkModeButton.setOnClickListener {
+            requireActivity().title = "GUI/Remove link mode"
+            hostView.currentMode = HostView.Mode.REMOVE_LINK
         }
         linkModeButton.setOnClickListener {
             requireActivity().title = "GUI/Link hosts mode"
@@ -142,6 +147,19 @@ class GUIFragment : Fragment() {
 
                             if (selectedHosts.size == 2) {
                                 hostView.linkHosts(selectedHosts[0], selectedHosts[1])
+                                selectedHosts.clear()
+                            }
+                        }
+                    }
+
+                    HostView.Mode.REMOVE_LINK -> {
+                        val selectedHost = hostView.hosts.find { it.contains(x, y) }
+
+                        if (selectedHost != null) {
+                            selectedHosts.add(selectedHost)
+
+                            if (selectedHosts.size == 2) {
+                                hostView.removeLink(selectedHosts[0], selectedHosts[1])
                                 selectedHosts.clear()
                             }
                         }
