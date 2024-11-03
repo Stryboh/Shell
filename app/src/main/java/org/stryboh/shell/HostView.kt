@@ -12,7 +12,6 @@ import android.view.View
 class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     val hosts = mutableListOf<Host>()
     val lines = mutableListOf<Pair<Host, Host>>()
-
     private val paintLine = Paint().apply {
         color = Color.RED
         strokeWidth = 5f
@@ -39,7 +38,6 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
         for ((host1, host2) in lines) {
             canvas.drawLine(host1.x, host1.y, host2.x, host2.y, paintLine)
         }

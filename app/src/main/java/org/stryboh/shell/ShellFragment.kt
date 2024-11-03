@@ -36,7 +36,7 @@ class ShellFragment : Fragment() {
         scanButton.setOnClickListener {
             val cmd = ipText.text.toString()
             val command =
-                "su --mount-master -c export PATH=\$PATH:/data/data/org.stryboh.shell/files/nmap/; $cmd"
+                "su --mount-master -c export PATH=\$PATH:/data/data/org.stryboh.shell/files/nmap/bin; $cmd"
             startNmapScan(command)
         }
 

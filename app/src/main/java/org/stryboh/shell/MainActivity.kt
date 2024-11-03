@@ -65,17 +65,34 @@ class MainActivity : AppCompatActivity() {
         if (!destDir.exists()) {
             destDir.mkdir()
             try {
-                val files = assets.list("nmap")
-                if (files != null) {
-                    for (filename in files) {
-                        copyAsset("nmap/$filename", destDirPath + filename)
-                    }
-                }
-                Runtime.getRuntime()
-                    .exec("su --mount-master -c chmod 777 -R /data/data/org.stryboh.shell/files/nmap/")
-            } catch (e: java.lang.Exception) {
+                copyAssetsRecursively("nmap", destDirPath)
+                Runtime.getRuntime().exec("su --mount-master -c chmod 777 -R $destDirPath/bin/")
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun copyAssetsRecursively(assetDir: String, destDirPath: String) {
+        try {
+            val assetFiles = assets.list(assetDir)
+            if (assetFiles != null) {
+                val destDir = File(destDirPath)
+                if (!destDir.exists()) destDir.mkdir()
+
+                for (filename in assetFiles) {
+                    val assetPath = "$assetDir/$filename"
+                    val destPath = "$destDirPath/$filename"
+
+                    if (assets.list(assetPath)?.isEmpty() == true) {
+                        copyAsset(assetPath, destPath)
+                    } else {
+                        copyAssetsRecursively(assetPath, destPath)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -85,14 +102,15 @@ class MainActivity : AppCompatActivity() {
             val out: OutputStream = FileOutputStream(destPath)
             val buffer = ByteArray(1024)
             var read: Int
-            while ((`in`.read(buffer).also { read = it }) != -1) {
+            while (`in`.read(buffer).also { read = it } != -1) {
                 out.write(buffer, 0, read)
             }
             `in`.close()
             out.flush()
             out.close()
-        } catch (e: java.lang.Exception) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
     }
+
 }
