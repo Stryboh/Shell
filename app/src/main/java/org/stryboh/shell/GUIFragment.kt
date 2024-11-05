@@ -178,6 +178,29 @@ class GUIFragment : Fragment() {
                         hostView.moveHost(movingHost!!, x, y)
                     }
                 }
+                if (movingHost == null && hostView.currentMode == HostView.Mode.VIEW) {
+                    val delta_x = x - initialX
+                    val delta_y = y - initialY
+
+                    var canMove = false
+                    for (i in hostView.hosts ){
+                        if (i.x + delta_x < hostView.width &&  i.y + delta_y < hostView.height &&
+                            i.x + delta_x >= 0 &&  i.y + delta_y >= 0) {
+                            canMove = true
+                        }
+                    }
+
+                    longPressRunnable?.let { handler.removeCallbacks(it) }
+                    longPressRunnable = null
+                    isDragging = true
+                    if (canMove) {
+                        for (i in hostView.hosts ){
+                            hostView.moveHost(i, i.x + delta_x, i.y + delta_y)
+                        }
+                    }
+                    initialX = event.x
+                    initialY = event.y
+                }
             }
 
             MotionEvent.ACTION_UP -> {
@@ -276,7 +299,14 @@ class GUIFragment : Fragment() {
         val fileOutputStream: FileOutputStream
 
         try {
-            fileOutputStream = requireContext().openFileOutput(fileName, Context.MODE_PRIVATE)
+            if(!fileName.endsWith(".json"))
+            {
+                fileOutputStream = requireContext().openFileOutput("$fileName.json", Context.MODE_PRIVATE)
+            }
+            else{
+                fileOutputStream = requireContext().openFileOutput(fileName, Context.MODE_PRIVATE)
+            }
+
             val topology = mutableMapOf<String, Any>()
             topology["hosts"] = hostView.hosts
 
