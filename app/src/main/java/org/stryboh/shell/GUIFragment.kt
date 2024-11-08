@@ -30,8 +30,9 @@ class GUIFragment : Fragment() {
     private lateinit var saveButton: ImageButton
     private lateinit var loadButton: ImageButton
     private var movingHost: HostView.Host? = null
-    private var selectedHosts = mutableListOf<HostView.Host>()
     private val handler = Handler()
+    private var selectedForLinkRemovalHosts = mutableListOf<HostView.Host>()
+    private var selectedForLinkingHosts = mutableListOf<HostView.Host>()
     private var longPressRunnable: Runnable? = null
     private var initialX: Float = 0f
     private var initialY: Float = 0f
@@ -105,6 +106,8 @@ class GUIFragment : Fragment() {
 
                 when (hostView.currentMode) {
                     HostView.Mode.VIEW -> {
+                        selectedForLinkRemovalHosts.clear()
+                        selectedForLinkingHosts.clear()
                         movingHost = hostView.hosts.find { it.contains(x, y) }
 
                         if (movingHost != null) {
@@ -119,48 +122,46 @@ class GUIFragment : Fragment() {
                     }
 
                     HostView.Mode.REMOVE -> {
+                        selectedForLinkRemovalHosts.clear()
+                        selectedForLinkingHosts.clear()
                         val hostToRemove = hostView.hosts.find { it.contains(x, y) }
 
                         if (hostToRemove != null) {
                             hostView.removeHost(hostToRemove)
-                        } else {
-                            val linkToRemove = hostView.lines.find { line ->
-                                line.first.contains(x, y) || line.second.contains(x, y)
-                            }
-
-                            if (linkToRemove != null) {
-                                hostView.removeLink(linkToRemove.first, linkToRemove.second)
-                            }
                         }
                     }
 
                     HostView.Mode.ADD -> {
+                        selectedForLinkRemovalHosts.clear()
+                        selectedForLinkingHosts.clear()
                         val newHost = HostView.Host(x, y)
                         hostView.addHost(newHost)
                     }
 
                     HostView.Mode.LINK -> {
+                        selectedForLinkRemovalHosts.clear()
                         val selectedHost = hostView.hosts.find { it.contains(x, y) }
 
                         if (selectedHost != null) {
-                            selectedHosts.add(selectedHost)
+                            selectedForLinkingHosts.add(selectedHost)
 
-                            if (selectedHosts.size == 2) {
-                                hostView.linkHosts(selectedHosts[0], selectedHosts[1])
-                                selectedHosts.clear()
+                            if (selectedForLinkingHosts.size == 2) {
+                                hostView.linkHosts(selectedForLinkingHosts[0], selectedForLinkingHosts[1])
+                                selectedForLinkingHosts.clear()
                             }
                         }
                     }
 
                     HostView.Mode.REMOVE_LINK -> {
+                        selectedForLinkingHosts.clear()
                         val selectedHost = hostView.hosts.find { it.contains(x, y) }
 
                         if (selectedHost != null) {
-                            selectedHosts.add(selectedHost)
 
-                            if (selectedHosts.size == 2) {
-                                hostView.removeLink(selectedHosts[0], selectedHosts[1])
-                                selectedHosts.clear()
+                            selectedForLinkRemovalHosts.add(selectedHost)
+                            if (selectedForLinkRemovalHosts.size == 2) {
+                                hostView.removeLink(selectedForLinkRemovalHosts[0], selectedForLinkRemovalHosts[1])
+                                selectedForLinkRemovalHosts.clear()
                             }
                         }
                     }
@@ -168,6 +169,8 @@ class GUIFragment : Fragment() {
             }
 
             MotionEvent.ACTION_MOVE -> {
+                selectedForLinkRemovalHosts.clear()
+                selectedForLinkingHosts.clear()
                 if (movingHost != null) {
                     val distance =
                         sqrt((x - initialX) * (x - initialX) + (y - initialY) * (y - initialY))
