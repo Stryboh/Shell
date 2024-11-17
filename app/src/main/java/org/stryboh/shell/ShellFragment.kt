@@ -14,6 +14,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
+import androidx.core.content.ContextCompat
 
 class ShellFragment : Fragment() {
     private lateinit var outputText: TextView
@@ -51,6 +56,19 @@ class ShellFragment : Fragment() {
         coroutineScope.launch {
 
             try {
+                val spannableBuilder = SpannableStringBuilder(outputText.text)
+                val redColor = context?.let { ContextCompat.getColor(it, R.color.red) }
+                val redText = SpannableString("\n>${ipText.text}")
+                redText.setSpan(
+                    redColor?.let { ForegroundColorSpan(it) },
+                    0,
+                    redText.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+                spannableBuilder.append(redText)
+                outputText.text = spannableBuilder
+
+
                 val process = Runtime.getRuntime().exec(command)
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
