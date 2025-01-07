@@ -66,11 +66,17 @@ class MainActivity : AppCompatActivity() {
             destDir.mkdir()
             try {
                 copyAssetsRecursively("nmap", destDirPath)
-                Runtime.getRuntime().exec("su --mount-master -c chmod 777 -R $destDirPath/bin/")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+
+        val nmapFile = File(filesDir, "nmap/bin/nmap")
+        val ncatFile = File(filesDir, "nmap/bin/ncat")
+        val npingFile = File(filesDir, "nmap/bin/nping")
+        nmapFile.setExecutable(true)
+        ncatFile.setExecutable(true)
+        npingFile.setExecutable(true)
     }
 
     private fun copyAssetsRecursively(assetDir: String, destDirPath: String) {

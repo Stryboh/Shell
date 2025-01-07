@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import android.text.Spannable
 import android.text.SpannableString
@@ -39,10 +40,10 @@ class ShellFragment : Fragment() {
         ipText = view.findViewById(R.id.text_ip)
 
         scanButton.setOnClickListener {
-            val cmd = ipText.text.toString()
-            val command =
-                "su --mount-master -c export PATH=\$PATH:/data/data/org.stryboh.shell/files/nmap/bin; $cmd"
-            startNmapScan(command)
+            var cmd = ipText.text.toString()
+            if (cmd.startsWith("nmap", ignoreCase = true))
+                cmd += " --system-dns"
+                startNmapScan(cmd)
         }
 
         clearButton.setOnClickListener {
@@ -56,6 +57,7 @@ class ShellFragment : Fragment() {
         coroutineScope.launch {
 
             try {
+                val nmapDir = File(requireContext().filesDir, "nmap/bin")
                 val spannableBuilder = SpannableStringBuilder(outputText.text)
                 val redColor = context?.let { ContextCompat.getColor(it, R.color.red) }
                 val redText = SpannableString("\n>${ipText.text}")
@@ -68,8 +70,32 @@ class ShellFragment : Fragment() {
                 spannableBuilder.append(redText)
                 outputText.text = spannableBuilder
 
+                var process: Process
+                if (command.startsWith("nmap", ignoreCase = true)) {
+                    val args = command.split(" ").drop(1).toTypedArray()
+                    val commandList = mutableListOf("${nmapDir.absolutePath}/nmap").apply { addAll(args) }
+                    process = ProcessBuilder(commandList)
+                        .directory(nmapDir.parentFile)
+                        .start()
+                }
+                else if (command.startsWith("ncat", ignoreCase = true)) {
+                    val args = command.split(" ").drop(1).toTypedArray()
+                    val commandList = mutableListOf("${nmapDir.absolutePath}/ncat").apply { addAll(args) }
+                    process = ProcessBuilder(commandList)
+                        .directory(nmapDir.parentFile)
+                        .start()
+                }
+                else if (command.startsWith("nping", ignoreCase = true)) {
+                    val args = command.split(" ").drop(1).toTypedArray()
+                    val commandList = mutableListOf("${nmapDir.absolutePath}/nping").apply { addAll(args) }
+                    process = ProcessBuilder(commandList)
+                        .directory(nmapDir.parentFile)
+                        .start()
+                }
+                else {
+                    process = Runtime.getRuntime().exec(command)
+                }
 
-                val process = Runtime.getRuntime().exec(command)
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
                 var line: String?

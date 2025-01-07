@@ -80,6 +80,7 @@ dependencies {
     implementation (libs.material.v130alpha03)
     implementation(libs.firebase.crashlytics.buildtools)
     implementation (libs.gson)
+    implementation(libs.androidx.preference.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
