@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "org.stryboh.shell"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.stryboh.shell"
@@ -14,7 +14,7 @@ android {
         //noinspection ExpiredTargetSdkVersion
         targetSdk = 28
         versionCode = 1
-        versionName = "0.1.9"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

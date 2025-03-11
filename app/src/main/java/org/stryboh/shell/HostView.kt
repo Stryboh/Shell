@@ -58,7 +58,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
     private fun drawHostInfo(canvas: Canvas, host: Host) {
         val paint = Paint().apply {
-            color = Color.BLACK
+            color = Color.CYAN
             textSize = 40f
             textAlign = Paint.Align.CENTER
         }

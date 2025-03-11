@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -19,13 +18,16 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
+import android.widget.ImageButton
 import androidx.core.content.ContextCompat
 
 class ShellFragment : Fragment() {
     private lateinit var outputText: TextView
-    private lateinit var scanButton: Button
-    private lateinit var clearButton: Button
+    private lateinit var scanButton: ImageButton
+    private lateinit var clearButton: ImageButton
+    private lateinit var stopButton: ImageButton
     private lateinit var ipText: EditText
+    lateinit var process: Process
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreateView(
@@ -37,13 +39,19 @@ class ShellFragment : Fragment() {
         outputText = view.findViewById(R.id.text_output)
         scanButton = view.findViewById(R.id.button_run)
         clearButton = view.findViewById(R.id.button_clear)
+        stopButton = view.findViewById(R.id.button_stop)
         ipText = view.findViewById(R.id.text_ip)
 
         scanButton.setOnClickListener {
             var cmd = ipText.text.toString()
             if (cmd.startsWith("nmap", ignoreCase = true))
                 cmd += " --system-dns"
-                startNmapScan(cmd)
+            startNmapScan(cmd)
+        }
+
+        stopButton.setOnClickListener {
+            if (::process.isInitialized)
+                process.destroy()
         }
 
         clearButton.setOnClickListener {
@@ -70,7 +78,6 @@ class ShellFragment : Fragment() {
                 spannableBuilder.append(redText)
                 outputText.text = spannableBuilder
 
-                var process: Process
                 if (command.startsWith("nmap", ignoreCase = true)) {
                     val args = command.split(" ").drop(1).toTypedArray()
                     val commandList = mutableListOf("${nmapDir.absolutePath}/nmap").apply { addAll(args) }
