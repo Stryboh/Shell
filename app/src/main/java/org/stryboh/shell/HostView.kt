@@ -10,7 +10,6 @@ import android.util.AttributeSet
 import android.view.View
 
 class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
-    val hosts = mutableListOf<Host>()
     val lines = mutableListOf<Pair<Host, Host>>()
     private val paintLine = Paint().apply {
         color = Color.RED
@@ -43,7 +42,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         }
 
         computerIcon?.let { drawable ->
-            for (host in hosts) {
+            for (host in Companion.hosts) {
                 drawable.setBounds(
                     (host.x - drawable.intrinsicWidth / 2).toInt(),
                     (host.y - drawable.intrinsicHeight / 2).toInt(),
@@ -67,7 +66,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     }
 
     fun addHost(host: Host) {
-        hosts.add(host)
+        Companion.hosts.add(host)
         invalidate()
     }
 
@@ -89,7 +88,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
     }
 
     fun removeHost(host: Host) {
-        hosts.remove(host)
+        Companion.hosts.remove(host)
         lines.removeAll { it.first == host || it.second == host }
         invalidate()
     }
@@ -123,7 +122,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
             this.hostName = hostName
             this.id = id
 
-            nextId = nextId.coerceAtLeast(id) + 1
+            nextId = HostView.Companion.hosts.size + 1
         }
 
         fun contains(px: Float, py: Float): Boolean {
@@ -137,5 +136,9 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         var hostId1: Int,
         var hostId2: Int
     )
+
+    companion object {
+        val hosts = mutableListOf<Host>()
+    }
 
 }

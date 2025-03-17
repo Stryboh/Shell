@@ -17,7 +17,6 @@ import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import com.google.gson.Gson
 import kotlin.math.sqrt
 
 class GUIFragment : Fragment() {
@@ -108,7 +107,7 @@ class GUIFragment : Fragment() {
                     HostView.Mode.VIEW -> {
                         selectedForLinkRemovalHosts.clear()
                         selectedForLinkingHosts.clear()
-                        movingHost = hostView.hosts.find { it.contains(x, y) }
+                        movingHost = HostView.hosts.find { it.contains(x, y) }
 
                         if (movingHost != null) {
                             longPressRunnable = Runnable {
@@ -124,7 +123,7 @@ class GUIFragment : Fragment() {
                     HostView.Mode.REMOVE -> {
                         selectedForLinkRemovalHosts.clear()
                         selectedForLinkingHosts.clear()
-                        val hostToRemove = hostView.hosts.find { it.contains(x, y) }
+                        val hostToRemove = HostView.hosts.find { it.contains(x, y) }
 
                         if (hostToRemove != null) {
                             hostView.removeHost(hostToRemove)
@@ -140,7 +139,7 @@ class GUIFragment : Fragment() {
 
                     HostView.Mode.LINK -> {
                         selectedForLinkRemovalHosts.clear()
-                        val selectedHost = hostView.hosts.find { it.contains(x, y) }
+                        val selectedHost = HostView.hosts.find { it.contains(x, y) }
 
                         if (selectedHost != null) {
                             selectedForLinkingHosts.add(selectedHost)
@@ -154,7 +153,7 @@ class GUIFragment : Fragment() {
 
                     HostView.Mode.REMOVE_LINK -> {
                         selectedForLinkingHosts.clear()
-                        val selectedHost = hostView.hosts.find { it.contains(x, y) }
+                        val selectedHost = HostView.hosts.find { it.contains(x, y) }
 
                         if (selectedHost != null) {
 
@@ -186,7 +185,7 @@ class GUIFragment : Fragment() {
                     val delta_y = y - initialY
 
                     var canMove = false
-                    for (i in hostView.hosts ){
+                    for (i in HostView.hosts ){
                         if (i.x + delta_x < hostView.width &&  i.y + delta_y < hostView.height &&
                             i.x + delta_x >= 0 &&  i.y + delta_y >= 0) {
                             canMove = true
@@ -197,7 +196,7 @@ class GUIFragment : Fragment() {
                     longPressRunnable = null
                     isDragging = true
                     if (canMove) {
-                        for (i in hostView.hosts ){
+                        for (i in HostView.hosts ){
                             hostView.moveHost(i, i.x + delta_x, i.y + delta_y)
                         }
                     }
@@ -362,7 +361,7 @@ class GUIFragment : Fragment() {
                 arrayOf(fileName)
             )
 
-            for (host in hostView.hosts) {
+            for (host in HostView.hosts) {
                 val values = ContentValues().apply {
                     put(DatabaseHelper.COLUMN_TOPOLOGY_NAME, fileName)
                     put(DatabaseHelper.COLUMN_HOST_ID, host.id)
@@ -413,7 +412,7 @@ class GUIFragment : Fragment() {
                 Toast.makeText(requireContext(), "Topology does not exist.", Toast.LENGTH_SHORT).show()
                 return
             }
-            hostView.hosts.clear()
+            HostView.hosts.clear()
             hostView.lines.clear()
             do {
                 val host = HostView.Host(
@@ -439,8 +438,8 @@ class GUIFragment : Fragment() {
             while (linksCursor.moveToNext()) {
                 val hostId1 = linksCursor.getInt(linksCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID1))
                 val hostId2 = linksCursor.getInt(linksCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID2))
-                val host1 = hostView.hosts.find { it.id == hostId1 }
-                val host2 = hostView.hosts.find { it.id == hostId2 }
+                val host1 = HostView.hosts.find { it.id == hostId1 }
+                val host2 = HostView.hosts.find { it.id == hostId2 }
 
                 if (host1 != null && host2 != null) {
                     hostView.linkHosts(host1, host2)
