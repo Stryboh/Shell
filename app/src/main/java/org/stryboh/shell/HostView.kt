@@ -110,6 +110,22 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
             }
         }
 
+        fun constructor(
+            x: Float,
+            y: Float,
+            hostName: String = "",
+            hostIP: String = "",
+            id: Int = generateId()
+        ) {
+            this.x = x
+            this.y = y
+            this.hostIP = hostIP
+            this.hostName = hostName
+            this.id = id
+
+            nextId = nextId.coerceAtLeast(id) + 1
+        }
+
         fun contains(px: Float, py: Float): Boolean {
             val dx = px - x
             val dy = py - y

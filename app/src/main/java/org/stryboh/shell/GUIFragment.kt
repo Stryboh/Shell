@@ -2,9 +2,13 @@ package org.stryboh.shell
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.ContentValues
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.os.Handler
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -14,9 +18,6 @@ import android.widget.ImageButton
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import java.io.File
-import java.io.FileOutputStream
 import kotlin.math.sqrt
 
 class GUIFragment : Fragment() {
@@ -40,7 +41,6 @@ class GUIFragment : Fragment() {
     private var dialogShown = false
     private val longPressDuration = 500L
     private val moveThreshold = 30f
-    private val gson = Gson()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
@@ -277,52 +277,112 @@ class GUIFragment : Fragment() {
     }
 
     private fun showFileSelectionDialog() {
-        val filesDir = requireContext().filesDir
-        val files =
-            filesDir.listFiles()?.filter { it.isFile && it.extension == "json" } ?: emptyList()
+        val dbHelper = DatabaseHelper(requireContext())
+        val db = dbHelper.readableDatabase
+        val topologyNames = mutableSetOf<String>()
+        try {
+            val cursor = db.query(
+                true,
+                DatabaseHelper.TABLE_HOSTS,
+                arrayOf(DatabaseHelper.COLUMN_TOPOLOGY_NAME),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
 
-        if (files.isNotEmpty()) {
-            val fileNames = files.map { it.name }
-            AlertDialog.Builder(requireContext())
-                .setTitle("Select a Topology File")
-                .setItems(fileNames.toTypedArray()) { _, which ->
-                    loadTopology(files[which].toString())
+            cursor.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TOPOLOGY_NAME))
+                    topologyNames.add(name)
                 }
-                .show()
-        } else {
+            }
+
+            val linksCursor = db.query(
+                true,
+                DatabaseHelper.TABLE_LINKS,
+                arrayOf(DatabaseHelper.COLUMN_TOPOLOGY_NAME),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+
+            linksCursor.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(it.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TOPOLOGY_NAME))
+                    topologyNames.add(name)
+                }
+            }
+
+            if (topologyNames.isNotEmpty()) {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Select a Topology")
+                    .setItems(topologyNames.toTypedArray()) { _, which ->
+                        val selectedName = topologyNames.elementAt(which)
+                        loadTopology(selectedName)
+                    }
+                    .show()
+            } else {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("No Topologies Found")
+                    .setMessage("No saved topologies are available to load.")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
             AlertDialog.Builder(requireContext())
-                .setTitle("No Files Found")
-                .setMessage("No topology files are available to load.")
+                .setTitle("Error")
+                .setMessage("Failed to load topologies list: ${e.message}")
                 .setPositiveButton("OK", null)
                 .show()
+        } finally {
+            dbHelper.close()
         }
     }
 
     private fun saveTopology(fileName: String) {
-        val fileOutputStream: FileOutputStream
-
+        val dbHelper = DatabaseHelper(requireContext())
+        val db = dbHelper.writableDatabase
         try {
-            if(!fileName.endsWith(".json"))
-            {
-                fileOutputStream = requireContext().openFileOutput("$fileName.json", Context.MODE_PRIVATE)
-            }
-            else{
-                fileOutputStream = requireContext().openFileOutput(fileName, Context.MODE_PRIVATE)
-            }
+            db.beginTransaction()
+            db.delete(
+                DatabaseHelper.TABLE_HOSTS,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(fileName)
+            )
+            db.delete(
+                DatabaseHelper.TABLE_LINKS,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(fileName)
+            )
 
-            val topology = mutableMapOf<String, Any>()
-            topology["hosts"] = hostView.hosts
-
-            val links = hostView.lines.map { link ->
-                mapOf("hostId1" to link.first.id, "hostId2" to link.second.id)
+            for (host in hostView.hosts) {
+                val values = ContentValues().apply {
+                    put(DatabaseHelper.COLUMN_TOPOLOGY_NAME, fileName)
+                    put(DatabaseHelper.COLUMN_HOST_ID, host.id)
+                    put(DatabaseHelper.COLUMN_X, host.x)
+                    put(DatabaseHelper.COLUMN_Y, host.y)
+                    put(DatabaseHelper.COLUMN_HOST_NAME, host.hostName)
+                    put(DatabaseHelper.COLUMN_HOST_IP, host.hostIP)
+                }
+                db.insert(DatabaseHelper.TABLE_HOSTS, null, values)
             }
-
-            topology["links"] = links
-            val json = gson.toJson(topology)
-            fileOutputStream.write(json.toByteArray())
-            fileOutputStream.close()
-            Toast.makeText(requireContext(), "Topology saved successfully.", Toast.LENGTH_SHORT)
-                .show()
+            for (link in hostView.lines) {
+                val values = ContentValues().apply {
+                    put(DatabaseHelper.COLUMN_TOPOLOGY_NAME, fileName)
+                    put(DatabaseHelper.COLUMN_HOST_ID1, link.first.id)
+                    put(DatabaseHelper.COLUMN_HOST_ID2, link.second.id)
+                }
+                db.insert(DatabaseHelper.TABLE_LINKS, null, values)
+            }
+            db.setTransactionSuccessful()
+            Toast.makeText(requireContext(), "Topology saved successfully.", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(
@@ -330,58 +390,127 @@ class GUIFragment : Fragment() {
                 "Failed to save topology: ${e.message}",
                 Toast.LENGTH_SHORT
             ).show()
+        } finally {
+            db.endTransaction()
+            dbHelper.close()
         }
     }
 
     private fun loadTopology(fileName: String) {
-        val file = File(fileName)
-
-        if (!file.exists()) {
-            Toast.makeText(requireContext(), "File does not exist.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+        val dbHelper = DatabaseHelper(requireContext())
+        val db = dbHelper.readableDatabase
         try {
-            val json = file.readText()
-            val type = object : TypeToken<Map<String, Any>>() {}.type
-            val topology: Map<String, Any> = gson.fromJson(json, type)
-            val hostsJson = topology["hosts"] as List<Map<String, Any>>
-            val linksJson = topology["links"] as List<Map<String, Double>>
+            val hostsCursor = db.query(
+                DatabaseHelper.TABLE_HOSTS,
+                null,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(fileName),
+                null,
+                null,
+                null
+            )
+            if (!hostsCursor.moveToFirst()) {
+                Toast.makeText(requireContext(), "Topology does not exist.", Toast.LENGTH_SHORT).show()
+                return
+            }
             hostView.hosts.clear()
             hostView.lines.clear()
-
-            for (hostData in hostsJson) {
+            do {
                 val host = HostView.Host(
-                    x = (hostData["x"] as Number).toFloat(),
-                    y = (hostData["y"] as Number).toFloat(),
-                    hostName = hostData["hostName"] as String,
-                    hostIP = hostData["hostIP"] as String,
-                    id = (hostData["id"] as Number).toInt()
+                    x = hostsCursor.getFloat(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_X)),
+                    y = hostsCursor.getFloat(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_Y)),
+                    hostName = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_NAME)),
+                    hostIP = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_IP)),
+                    id = hostsCursor.getInt(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID))
                 )
                 hostView.addHost(host)
-            }
-
-            for (linkData in linksJson) {
-                val hostId1 = (linkData["hostId1"] as Number).toInt()
-                val hostId2 = (linkData["hostId2"] as Number).toInt()
+                Log.d("STATUS", "ADDED HOST $host")
+            } while (hostsCursor.moveToNext())
+            hostsCursor.close()
+            val linksCursor = db.query(
+                DatabaseHelper.TABLE_LINKS,
+                null,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(fileName),
+                null,
+                null,
+                null
+            )
+            while (linksCursor.moveToNext()) {
+                val hostId1 = linksCursor.getInt(linksCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID1))
+                val hostId2 = linksCursor.getInt(linksCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID2))
                 val host1 = hostView.hosts.find { it.id == hostId1 }
                 val host2 = hostView.hosts.find { it.id == hostId2 }
 
                 if (host1 != null && host2 != null) {
                     hostView.linkHosts(host1, host2)
+                    Log.d("STATUS", "LINKED HOSTS: $host1 and $host2")
                 }
             }
-
-            Toast.makeText(requireContext(), "Topology loaded successfully.", Toast.LENGTH_SHORT)
-                .show()
+            linksCursor.close()
+            Toast.makeText(requireContext(), "Topology loaded successfully.", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
             AlertDialog.Builder(requireContext())
                 .setTitle("Error Loading Topology")
-                .setMessage("Failed to load the topology: ${e.message}")
+                .setMessage("Failed to load topology: ${e.message}")
                 .setPositiveButton("OK", null)
                 .show()
+        } finally {
+            dbHelper.close()
         }
     }
 
+    class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+        companion object {
+            private const val DATABASE_NAME = "network_topology.db"
+            private const val DATABASE_VERSION = 1
+
+            // Таблица хостов
+            const val TABLE_HOSTS = "hosts"
+            const val COLUMN_HOST_ID = "host_id"
+            const val COLUMN_TOPOLOGY_NAME = "topology_name"
+            const val COLUMN_X = "x"
+            const val COLUMN_Y = "y"
+            const val COLUMN_HOST_NAME = "host_name"
+            const val COLUMN_HOST_IP = "host_ip"
+
+            // Таблица связей
+            const val TABLE_LINKS = "links"
+            const val COLUMN_HOST_ID1 = "host_id1"
+            const val COLUMN_HOST_ID2 = "host_id2"
+        }
+
+        override fun onCreate(db: SQLiteDatabase) {
+            val createHostsTable = """
+            CREATE TABLE $TABLE_HOSTS (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_TOPOLOGY_NAME TEXT NOT NULL,
+                $COLUMN_HOST_ID INTEGER NOT NULL,
+                $COLUMN_X REAL NOT NULL,
+                $COLUMN_Y REAL NOT NULL,
+                $COLUMN_HOST_NAME TEXT NOT NULL,
+                $COLUMN_HOST_IP TEXT NOT NULL
+            )
+        """.trimIndent()
+
+            val createLinksTable = """
+            CREATE TABLE $TABLE_LINKS (
+                _id INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_TOPOLOGY_NAME TEXT NOT NULL,
+                $COLUMN_HOST_ID1 INTEGER NOT NULL,
+                $COLUMN_HOST_ID2 INTEGER NOT NULL
+            )
+        """.trimIndent()
+
+            db.execSQL(createHostsTable)
+            db.execSQL(createLinksTable)
+        }
+
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            db.execSQL("DROP TABLE IF EXISTS $TABLE_HOSTS")
+            db.execSQL("DROP TABLE IF EXISTS $TABLE_LINKS")
+            onCreate(db)
+        }
+    }
 }

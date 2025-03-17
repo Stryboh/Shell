@@ -44,8 +44,6 @@ class ShellFragment : Fragment() {
 
         scanButton.setOnClickListener {
             var cmd = ipText.text.toString()
-            if (cmd.startsWith("nmap", ignoreCase = true))
-                cmd += " --system-dns"
             startNmapScan(cmd)
         }
 
@@ -78,30 +76,21 @@ class ShellFragment : Fragment() {
                 spannableBuilder.append(redText)
                 outputText.text = spannableBuilder
 
-                if (command.startsWith("nmap", ignoreCase = true)) {
-                    val args = command.split(" ").drop(1).toTypedArray()
-                    val commandList = mutableListOf("${nmapDir.absolutePath}/nmap").apply { addAll(args) }
-                    process = ProcessBuilder(commandList)
-                        .directory(nmapDir.parentFile)
-                        .start()
-                }
-                else if (command.startsWith("ncat", ignoreCase = true)) {
-                    val args = command.split(" ").drop(1).toTypedArray()
-                    val commandList = mutableListOf("${nmapDir.absolutePath}/ncat").apply { addAll(args) }
-                    process = ProcessBuilder(commandList)
-                        .directory(nmapDir.parentFile)
-                        .start()
-                }
-                else if (command.startsWith("nping", ignoreCase = true)) {
-                    val args = command.split(" ").drop(1).toTypedArray()
-                    val commandList = mutableListOf("${nmapDir.absolutePath}/nping").apply { addAll(args) }
-                    process = ProcessBuilder(commandList)
-                        .directory(nmapDir.parentFile)
-                        .start()
-                }
-                else {
-                    process = Runtime.getRuntime().exec(command)
-                }
+                var toExec: String
+
+                if (command.contains("nmap"))
+                    toExec = command.replace("nmap", "${nmapDir.absolutePath}/nmap --system-dns")
+
+                else if(command.contains("ncat"))
+                    toExec  = command.replace("ncat", "${nmapDir.absolutePath}/ncat")
+
+                else if(command.contains("nping"))
+                    toExec = command.replace("nping", "${nmapDir.absolutePath}/nping")
+
+                else
+                    toExec = command
+
+                process = Runtime.getRuntime().exec(toExec)
 
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))
