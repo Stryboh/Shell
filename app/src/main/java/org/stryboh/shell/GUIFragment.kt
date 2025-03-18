@@ -235,8 +235,11 @@ class GUIFragment : Fragment() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_host, null)
         val editHostName: EditText = dialogView.findViewById(R.id.edit_host_name)
         val editHostIP: EditText = dialogView.findViewById(R.id.edit_host_ip)
+        val editHostInfo: EditText = dialogView.findViewById(R.id.edit_host_info)
+
         editHostName.setText(host.hostName)
         editHostIP.setText(host.hostIP)
+        editHostInfo.setText(host.hostInfo)
 
         AlertDialog.Builder(requireContext())
             .setTitle("Edit Host")
@@ -244,6 +247,7 @@ class GUIFragment : Fragment() {
             .setPositiveButton("Save") { _, _ ->
                 host.hostName = editHostName.text.toString()
                 host.hostIP = editHostIP.text.toString()
+                host.hostInfo = editHostInfo.text.toString()
                 hostView.invalidate()
                 dialogShown = false
             }
@@ -369,6 +373,7 @@ class GUIFragment : Fragment() {
                     put(DatabaseHelper.COLUMN_Y, host.y)
                     put(DatabaseHelper.COLUMN_HOST_NAME, host.hostName)
                     put(DatabaseHelper.COLUMN_HOST_IP, host.hostIP)
+                    put(DatabaseHelper.COLUMN_HOST_INFO, host.hostInfo)
                 }
                 db.insert(DatabaseHelper.TABLE_HOSTS, null, values)
             }
@@ -420,6 +425,7 @@ class GUIFragment : Fragment() {
                     y = hostsCursor.getFloat(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_Y)),
                     hostName = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_NAME)),
                     hostIP = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_IP)),
+                    hostInfo = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_INFO)),
                     id = hostsCursor.getInt(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID))
                 )
                 hostView.addHost(host)
@@ -473,6 +479,7 @@ class GUIFragment : Fragment() {
             const val COLUMN_Y = "y"
             const val COLUMN_HOST_NAME = "host_name"
             const val COLUMN_HOST_IP = "host_ip"
+            const val COLUMN_HOST_INFO = "host_info"
 
             // Таблица связей
             const val TABLE_LINKS = "links"
@@ -489,7 +496,8 @@ class GUIFragment : Fragment() {
                 $COLUMN_X REAL NOT NULL,
                 $COLUMN_Y REAL NOT NULL,
                 $COLUMN_HOST_NAME TEXT NOT NULL,
-                $COLUMN_HOST_IP TEXT NOT NULL
+                $COLUMN_HOST_IP TEXT NOT NULL,
+                $COLUMN_HOST_INFO TEXT NOT NULL
             )
         """.trimIndent()
 

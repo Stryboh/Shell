@@ -98,6 +98,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         var y: Float,
         var hostName: String = "",
         var hostIP: String = "",
+        var hostInfo: String = "",
         var id: Int = generateId()
     ) {
         companion object {
@@ -114,12 +115,14 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
             y: Float,
             hostName: String = "",
             hostIP: String = "",
+            hostInfo: String = "",
             id: Int = generateId()
         ) {
             this.x = x
             this.y = y
             this.hostIP = hostIP
             this.hostName = hostName
+            this.hostInfo = hostInfo
             this.id = id
 
             nextId = HostView.Companion.hosts.size + 1
