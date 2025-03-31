@@ -4,8 +4,14 @@
     tools:ignore="HardcodedText">
     <item
         android:id="@+id/nav_shell"
+        android:icon="@drawable/ic_shell"
         android:title="Shell" />
     <item
         android:id="@+id/nav_gui"
+        android:icon="@drawable/ic_gui"
         android:title="GUI" />
+    <item
+        android:id="@+id/nav_nmap"
+        android:icon="@drawable/ic_nmap"
+        android:title="Nmap Scripts" />
 </menu>

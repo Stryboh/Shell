@@ -8,16 +8,29 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Bundle
 import android.os.Handler
+import android.os.Environment
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserFactory
 import kotlin.math.sqrt
+import java.io.File
+import android.os.Build
+import android.app.Activity
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 
 class GUIFragment : Fragment() {
 
@@ -27,6 +40,7 @@ class GUIFragment : Fragment() {
     private lateinit var removeModeButton: ImageButton
     private lateinit var removeLinkModeButton: ImageButton
     private lateinit var linkModeButton: ImageButton
+    private lateinit var loadXMLButton: Button
     private lateinit var saveButton: ImageButton
     private lateinit var loadButton: ImageButton
     private var movingHost: HostView.Host? = null
@@ -40,6 +54,9 @@ class GUIFragment : Fragment() {
     private var dialogShown = false
     private val longPressDuration = 500L
     private val moveThreshold = 30f
+    private lateinit var prefs: SharedPreferences
+    private var scanDirectoryUri: Uri? = null
+    private lateinit var directoryLauncher: ActivityResultLauncher<Intent>
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
@@ -52,6 +69,7 @@ class GUIFragment : Fragment() {
 
         saveButton = view.findViewById(R.id.save_button)
         loadButton = view.findViewById(R.id.load_button)
+        loadXMLButton = view.findViewById(R.id.xml_load_button)
         viewModeButton = view.findViewById(R.id.view_mode_button)
         addModeButton = view.findViewById(R.id.add_mode_button)
         removeModeButton = view.findViewById(R.id.remove_mode_button)
@@ -64,6 +82,9 @@ class GUIFragment : Fragment() {
         }
         loadButton.setOnClickListener {
             showFileSelectionDialog()
+        }
+        loadXMLButton.setOnClickListener {
+            showNmapImportDialog()
         }
         viewModeButton.setOnClickListener {
             requireActivity().title = "GUI/View mode"
@@ -92,6 +113,55 @@ class GUIFragment : Fragment() {
         }
 
         return view
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Initialize SharedPreferences
+        prefs = requireContext().getSharedPreferences("NmapScriptPrefs", 0)
+
+        // Get saved directory URI if available
+        val savedUriString = prefs.getString("SCAN_DIRECTORY_URI", null)
+        if (savedUriString != null) {
+            scanDirectoryUri = Uri.parse(savedUriString)
+
+            // Take persistent URI permission
+            try {
+                requireContext().contentResolver.takePersistableUriPermission(
+                    scanDirectoryUri!!,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (e: Exception) {
+                Log.e("GUIFragment", "Error taking persistent permission: ${e.message}")
+                // If we can't get permission, clear the saved URI
+                scanDirectoryUri = null
+                prefs.edit().remove("SCAN_DIRECTORY_URI").apply()
+            }
+        }
+
+        // Initialize activity result launcher for directory selection
+        directoryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data?.data?.let { uri ->
+                    // Save the selected directory URI
+                    scanDirectoryUri = uri
+                    prefs.edit().putString("SCAN_DIRECTORY_URI", uri.toString()).apply()
+
+                    // Take persistent permission to access this directory
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+
+                    Toast.makeText(requireContext(), "Selected directory for scan results", Toast.LENGTH_SHORT).show()
+                    Log.d("GUIFragment", "Directory URI: $uri")
+
+                    // Now show the import dialog with the selected directory
+                    showNmapImportDialog()
+                }
+            } else {
+                Toast.makeText(requireContext(), "No directory selected", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun handleTouchEvent(event: MotionEvent) {
@@ -235,10 +305,20 @@ class GUIFragment : Fragment() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_host, null)
         val editHostName: EditText = dialogView.findViewById(R.id.edit_host_name)
         val editHostIP: EditText = dialogView.findViewById(R.id.edit_host_ip)
+        val editHostStatus: EditText = dialogView.findViewById(R.id.edit_host_status)
+        val editHostOS: EditText = dialogView.findViewById(R.id.edit_host_os)
+        val editHostPorts: EditText = dialogView.findViewById(R.id.edit_host_ports)
+        val editHostUptime: EditText = dialogView.findViewById(R.id.edit_host_uptime)
+        val editHostLastBoot: EditText = dialogView.findViewById(R.id.edit_host_lastboot)
         val editHostInfo: EditText = dialogView.findViewById(R.id.edit_host_info)
 
         editHostName.setText(host.hostName)
         editHostIP.setText(host.hostIP)
+        editHostStatus.setText(host.status)
+        editHostOS.setText(host.osInfo)
+        editHostPorts.setText(host.ports)
+        editHostUptime.setText(host.uptime)
+        editHostLastBoot.setText(host.lastBoot)
         editHostInfo.setText(host.hostInfo)
 
         AlertDialog.Builder(requireContext())
@@ -247,6 +327,11 @@ class GUIFragment : Fragment() {
             .setPositiveButton("Save") { _, _ ->
                 host.hostName = editHostName.text.toString()
                 host.hostIP = editHostIP.text.toString()
+                host.status = editHostStatus.text.toString()
+                host.osInfo = editHostOS.text.toString()
+                host.ports = editHostPorts.text.toString()
+                host.uptime = editHostUptime.text.toString()
+                host.lastBoot = editHostLastBoot.text.toString()
                 host.hostInfo = editHostInfo.text.toString()
                 hostView.invalidate()
                 dialogShown = false
@@ -323,17 +408,36 @@ class GUIFragment : Fragment() {
             }
 
             if (topologyNames.isNotEmpty()) {
+                val items = arrayOf("Load", "Delete")
                 AlertDialog.Builder(requireContext())
-                    .setTitle("Select a Topology")
-                    .setItems(topologyNames.toTypedArray()) { _, which ->
-                        val selectedName = topologyNames.elementAt(which)
-                        loadTopology(selectedName)
+                    .setTitle("Select Action")
+                    .setItems(items) { _, actionWhich ->
+                        when (actionWhich) {
+                            0 -> { // Load
+                                AlertDialog.Builder(requireContext())
+                                    .setTitle("Select a Topology to Load")
+                                    .setItems(topologyNames.toTypedArray()) { _, which ->
+                                        val selectedName = topologyNames.elementAt(which)
+                                        loadTopology(selectedName)
+                                    }
+                                    .show()
+                            }
+                            1 -> { // Delete
+                                AlertDialog.Builder(requireContext())
+                                    .setTitle("Select a Topology to Delete")
+                                    .setItems(topologyNames.toTypedArray()) { _, which ->
+                                        val selectedName = topologyNames.elementAt(which)
+                                        deleteTopology(selectedName)
+                                    }
+                                    .show()
+                            }
+                        }
                     }
                     .show()
             } else {
                 AlertDialog.Builder(requireContext())
                     .setTitle("No Topologies Found")
-                    .setMessage("No saved topologies are available to load.")
+                    .setMessage("No saved topologies are available.")
                     .setPositiveButton("OK", null)
                     .show()
             }
@@ -347,6 +451,336 @@ class GUIFragment : Fragment() {
         } finally {
             dbHelper.close()
         }
+    }
+
+    private fun deleteTopology(topologyName: String) {
+        val dbHelper = DatabaseHelper(requireContext())
+        val db = dbHelper.writableDatabase
+        try {
+            db.beginTransaction()
+
+            // Delete from hosts table
+            db.delete(
+                DatabaseHelper.TABLE_HOSTS,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(topologyName)
+            )
+
+            // Delete from links table
+            db.delete(
+                DatabaseHelper.TABLE_LINKS,
+                "${DatabaseHelper.COLUMN_TOPOLOGY_NAME} = ?",
+                arrayOf(topologyName)
+            )
+
+            db.setTransactionSuccessful()
+            Toast.makeText(requireContext(), "Topology deleted successfully", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Failed to delete topology: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            db.endTransaction()
+            dbHelper.close()
+        }
+    }
+
+    private fun showNmapImportDialog() {
+        // First check if we have a directory URI, if not ask user to select one
+        if (scanDirectoryUri == null) {
+            showDirectoryPicker()
+            return
+        }
+
+        try {
+            // Get the DocumentFile that represents the directory
+            val documentFile = DocumentFile.fromTreeUri(requireContext(), scanDirectoryUri!!)
+
+            // List XML files in the directory
+            val xmlFiles = documentFile?.listFiles()?.filter {
+                it.name?.endsWith(".xml") == true
+            }
+
+            if (xmlFiles.isNullOrEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    "No XML files found in the selected directory",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+
+            // Display file names in dialog
+            val fileNames = xmlFiles.map { it.name ?: "Unknown" }.toTypedArray()
+
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Select XML File to Import")
+                .setItems(fileNames) { _, which ->
+                    val selectedFile = xmlFiles[which]
+                    try {
+                        // Read the file content using ContentResolver
+                        val inputStream = requireContext().contentResolver.openInputStream(selectedFile.uri)
+                        val xmlContent = inputStream?.bufferedReader()?.use { it.readText() }
+
+                        if (xmlContent != null) {
+                            importNmapXml(xmlContent)
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                "Error reading file: Content is null",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Error reading file: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        Log.e("GUIFragment", "File reading error", e)
+                    }
+                }
+                .show()
+        } catch (e: Exception) {
+            Toast.makeText(
+                requireContext(),
+                "Error accessing storage: ${e.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+            Log.e("GUIFragment", "Storage access error", e)
+        }
+    }
+
+    private fun showDirectoryPicker() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        intent.addFlags(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+        )
+        directoryLauncher.launch(intent)
+    }
+
+    private fun importNmapXml(xmlContent: String) {
+        try {
+            val hosts = parseNmapXml(xmlContent)
+
+            if (hosts.isEmpty()) {
+                Toast.makeText(requireContext(), "No hosts found in the XML", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            // Clear existing hosts before adding new ones
+            val clearExisting = AlertDialog.Builder(requireContext())
+                .setTitle("Import Hosts")
+                .setMessage("Found ${hosts.size} hosts. Do you want to clear existing hosts?")
+                .setPositiveButton("Yes") { _, _ ->
+                    HostView.hosts.clear()
+                    hostView.lines.clear()
+                    addImportedHosts(hosts)
+                }
+                .setNegativeButton("No") { _, _ ->
+                    addImportedHosts(hosts)
+                }
+                .create()
+
+            clearExisting.show()
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(),
+                "Failed to import XML: ${e.message}",
+                Toast.LENGTH_SHORT).show()
+            Log.e("GUIFragment", "XML import error", e)
+        }
+    }
+
+    private fun parseNmapXml(xmlInput: String): List<HostView.Host> {
+        val factory = XmlPullParserFactory.newInstance()
+        factory.isNamespaceAware = true
+        val parser = factory.newPullParser()
+        parser.setInput(xmlInput.reader())
+
+        val hosts = mutableListOf<HostView.Host>()
+        var currentHost: HostView.Host? = null
+        var inHost = false
+        var inPorts = false
+        var inPortsExtraports = false
+        var inOS = false
+        var currentOSInfo = StringBuilder()
+        var currentPortsInfo = StringBuilder()
+
+        val screenWidth = hostView.width.toFloat()
+        val screenHeight = hostView.height.toFloat()
+        val xOffset = 50f
+        val yOffset = 50f
+
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            when (parser.eventType) {
+                XmlPullParser.START_TAG -> {
+                    when (parser.name) {
+                        "host" -> {
+                            inHost = true
+                            val randomX = xOffset + Math.random() * (screenWidth - 2 * xOffset)
+                            val randomY = yOffset + Math.random() * (screenHeight - 2 * yOffset)
+                            currentHost = HostView.Host(
+                                x = randomX.toFloat(),
+                                y = randomY.toFloat()
+                            )
+                        }
+                        "status" -> {
+                            if (inHost) {
+                                currentHost?.status = parser.getAttributeValue(null, "state") ?: ""
+                            }
+                        }
+                        "address" -> {
+                            if (inHost && parser.getAttributeValue(null, "addrtype") == "ipv4") {
+                                currentHost?.hostIP = parser.getAttributeValue(null, "addr") ?: ""
+                            }
+                        }
+                        "hostname" -> {
+                            if (inHost && currentHost?.hostName.isNullOrEmpty()) {
+                                currentHost?.hostName = parser.getAttributeValue(null, "name") ?: ""
+                            }
+                        }
+                        "ports" -> {
+                            if (inHost) {
+                                inPorts = true
+                            }
+                        }
+                        "extraports" -> {
+                            if (inPorts) {
+                                inPortsExtraports = true
+                                currentPortsInfo.append("Extraports: ")
+                                    .append(parser.getAttributeValue(null, "state") ?: "")
+                                    .append(" (")
+                                    .append(parser.getAttributeValue(null, "count") ?: "")
+                                    .append(")\n")
+                            }
+                        }
+                        "port" -> {
+                            if (inPorts && !inPortsExtraports) {
+                                val protocol = parser.getAttributeValue(null, "protocol") ?: ""
+                                val portId = parser.getAttributeValue(null, "portid") ?: ""
+                                currentPortsInfo.append("$protocol/$portId ")
+                            }
+                        }
+                        "state" -> {
+                            if (inPorts && !inPortsExtraports) {
+                                currentPortsInfo.append("(")
+                                    .append(parser.getAttributeValue(null, "state") ?: "")
+                                    .append(") ")
+                            }
+                        }
+                        "service" -> {
+                            if (inPorts && !inPortsExtraports) {
+                                val service = parser.getAttributeValue(null, "name") ?: ""
+                                val product = parser.getAttributeValue(null, "product") ?: ""
+                                val version = parser.getAttributeValue(null, "version") ?: ""
+
+                                currentPortsInfo.append("$service")
+                                if (product.isNotEmpty()) {
+                                    currentPortsInfo.append(" $product")
+                                }
+                                if (version.isNotEmpty()) {
+                                    currentPortsInfo.append(" $version")
+                                }
+                                currentPortsInfo.append("\n")
+                            }
+                        }
+                        "os" -> {
+                            if (inHost) {
+                                inOS = true
+                            }
+                        }
+                        "osmatch" -> {
+                            if (inOS) {
+                                val name = parser.getAttributeValue(null, "name") ?: ""
+                                val accuracy = parser.getAttributeValue(null, "accuracy") ?: ""
+                                if (name.isNotEmpty()) {
+                                    currentOSInfo.append("OS: $name (Accuracy: $accuracy%)\n")
+                                }
+                            }
+                        }
+                        "uptime" -> {
+                            if (inHost) {
+                                val seconds = parser.getAttributeValue(null, "seconds") ?: ""
+                                val lastboot = parser.getAttributeValue(null, "lastboot") ?: ""
+                                if (seconds.isNotEmpty()) {
+                                    currentHost?.uptime = seconds
+                                }
+                                if (lastboot.isNotEmpty()) {
+                                    currentHost?.lastBoot = lastboot
+                                }
+                            }
+                        }
+                    }
+                }
+                XmlPullParser.END_TAG -> {
+                    when (parser.name) {
+                        "host" -> {
+                            inHost = false
+                            currentHost?.ports = currentPortsInfo.toString()
+                            currentHost?.osInfo = currentOSInfo.toString()
+                            currentHost?.hostInfo = "Status: ${currentHost?.status}\n" +
+                                    "${currentHost?.osInfo}" +
+                                    "Uptime: ${currentHost?.uptime}s, Last boot: ${currentHost?.lastBoot}"
+
+                            currentHost?.let { hosts.add(it) }
+                            currentHost = null
+                            currentPortsInfo = StringBuilder()
+                            currentOSInfo = StringBuilder()
+                        }
+                        "ports" -> {
+                            inPorts = false
+                            inPortsExtraports = false
+                        }
+                        "extraports" -> {
+                            inPortsExtraports = false
+                        }
+                        "os" -> {
+                            inOS = false
+                        }
+                    }
+                }
+            }
+            parser.next()
+        }
+        return hosts
+    }
+
+    private fun addImportedHosts(hosts: List<HostView.Host>) {
+        for (host in hosts) {
+            hostView.addHost(host)
+        }
+
+        // Automatically link hosts that are from the same subnet
+        if (hosts.size > 1) {
+            val subnets = mutableMapOf<String, MutableList<HostView.Host>>()
+
+            // Group hosts by subnet (first 3 octets of IP)
+            for (host in hosts) {
+                val ip = host.hostIP
+                val subnet = ip.split(".").take(3).joinToString(".")
+                if (!subnets.containsKey(subnet)) {
+                    subnets[subnet] = mutableListOf()
+                }
+                subnets[subnet]?.add(host)
+            }
+
+            // Link hosts within the same subnet
+            for (subnet in subnets.values) {
+                if (subnet.size > 1) {
+                    for (i in 0 until subnet.size - 1) {
+                        hostView.linkHosts(subnet[i], subnet[i + 1])
+                    }
+                }
+            }
+        }
+
+        Toast.makeText(requireContext(),
+            "Successfully imported ${hosts.size} hosts",
+            Toast.LENGTH_SHORT).show()
+
+        // Switch to view mode to see the imported hosts
+        hostView.currentMode = HostView.Mode.VIEW
+        requireActivity().title = "GUI/View mode"
     }
 
     private fun saveTopology(fileName: String) {
@@ -374,6 +808,11 @@ class GUIFragment : Fragment() {
                     put(DatabaseHelper.COLUMN_HOST_NAME, host.hostName)
                     put(DatabaseHelper.COLUMN_HOST_IP, host.hostIP)
                     put(DatabaseHelper.COLUMN_HOST_INFO, host.hostInfo)
+                    put(DatabaseHelper.COLUMN_HOST_STATUS, host.status)
+                    put(DatabaseHelper.COLUMN_OS_INFO, host.osInfo)
+                    put(DatabaseHelper.COLUMN_PORTS, host.ports)
+                    put(DatabaseHelper.COLUMN_UPTIME, host.uptime)
+                    put(DatabaseHelper.COLUMN_LASTBOOT, host.lastBoot)
                 }
                 db.insert(DatabaseHelper.TABLE_HOSTS, null, values)
             }
@@ -420,14 +859,46 @@ class GUIFragment : Fragment() {
             HostView.hosts.clear()
             hostView.lines.clear()
             do {
+                val hostId = hostsCursor.getInt(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID))
                 val host = HostView.Host(
                     x = hostsCursor.getFloat(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_X)),
                     y = hostsCursor.getFloat(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_Y)),
                     hostName = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_NAME)),
                     hostIP = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_IP)),
                     hostInfo = hostsCursor.getString(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_INFO)),
-                    id = hostsCursor.getInt(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID))
+                    id = hostId
                 )
+
+                // Load additional Nmap data if available
+                try {
+                    val portsIdx = hostsCursor.getColumnIndex(DatabaseHelper.COLUMN_PORTS)
+                    if (portsIdx != -1) {
+                        host.ports = hostsCursor.getString(portsIdx) ?: ""
+                    }
+
+                    val osInfoIdx = hostsCursor.getColumnIndex(DatabaseHelper.COLUMN_OS_INFO)
+                    if (osInfoIdx != -1) {
+                        host.osInfo = hostsCursor.getString(osInfoIdx) ?: ""
+                    }
+
+                    val statusIdx = hostsCursor.getColumnIndex(DatabaseHelper.COLUMN_HOST_STATUS)
+                    if (statusIdx != -1) {
+                        host.status = hostsCursor.getString(statusIdx) ?: ""
+                    }
+
+                    val uptimeIdx = hostsCursor.getColumnIndex(DatabaseHelper.COLUMN_UPTIME)
+                    if (uptimeIdx != -1) {
+                        host.uptime = hostsCursor.getString(uptimeIdx) ?: ""
+                    }
+
+                    val lastBootIdx = hostsCursor.getColumnIndex(DatabaseHelper.COLUMN_LASTBOOT)
+                    if (lastBootIdx != -1) {
+                        host.lastBoot = hostsCursor.getString(lastBootIdx) ?: ""
+                    }
+                } catch (e: Exception) {
+                    Log.e("GUIFragment", "Error loading Nmap data: ${e.message}")
+                }
+
                 hostView.addHost(host)
                 Log.d("STATUS", "ADDED HOST $host")
             } while (hostsCursor.moveToNext())
@@ -471,7 +942,7 @@ class GUIFragment : Fragment() {
             private const val DATABASE_NAME = "network_topology.db"
             private const val DATABASE_VERSION = 1
 
-            // Таблица хостов
+            // Hosts table
             const val TABLE_HOSTS = "hosts"
             const val COLUMN_HOST_ID = "host_id"
             const val COLUMN_TOPOLOGY_NAME = "topology_name"
@@ -480,8 +951,13 @@ class GUIFragment : Fragment() {
             const val COLUMN_HOST_NAME = "host_name"
             const val COLUMN_HOST_IP = "host_ip"
             const val COLUMN_HOST_INFO = "host_info"
+            const val COLUMN_HOST_STATUS = "host_status"
+            const val COLUMN_OS_INFO = "os_info"
+            const val COLUMN_PORTS = "ports"
+            const val COLUMN_UPTIME = "uptime"
+            const val COLUMN_LASTBOOT = "lastboot"
 
-            // Таблица связей
+            // Links table
             const val TABLE_LINKS = "links"
             const val COLUMN_HOST_ID1 = "host_id1"
             const val COLUMN_HOST_ID2 = "host_id2"
@@ -497,7 +973,12 @@ class GUIFragment : Fragment() {
                 $COLUMN_Y REAL NOT NULL,
                 $COLUMN_HOST_NAME TEXT NOT NULL,
                 $COLUMN_HOST_IP TEXT NOT NULL,
-                $COLUMN_HOST_INFO TEXT NOT NULL
+                $COLUMN_HOST_INFO TEXT NOT NULL,
+                $COLUMN_HOST_STATUS TEXT,
+                $COLUMN_OS_INFO TEXT,
+                $COLUMN_PORTS TEXT,
+                $COLUMN_UPTIME TEXT,
+                $COLUMN_LASTBOOT TEXT
             )
         """.trimIndent()
 

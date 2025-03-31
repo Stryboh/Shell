@@ -37,6 +37,10 @@ class MainActivity : AppCompatActivity() {
                     loadFragment(GUIFragment())
                     true
                 }
+                R.id.nav_nmap -> {
+                    loadFragment(NmapScriptFragment())
+                    true
+                }
                 else -> false
             }
         }

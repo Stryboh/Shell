@@ -80,5 +80,16 @@
             android:background="?android:selectableItemBackground"
             android:scaleType="center"
             android:padding="8dp" />
+
+        <Button
+            android:id="@+id/xml_load_button"
+            android:text="XML"
+            android:textColor="@color/lime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?android:selectableItemBackground"
+            android:scaleType="center"
+            android:padding="8dp" />
+
     </LinearLayout>
 </RelativeLayout>
