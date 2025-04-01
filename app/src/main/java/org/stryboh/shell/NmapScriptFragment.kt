@@ -4,9 +4,14 @@ import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -159,6 +164,42 @@ class NmapScriptFragment : Fragment() {
         directoryLauncher.launch(intent)
     }
 
+    private fun hasRootAccess(): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec("su -c echo root_test")
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val response = reader.readLine()
+            val exitValue = process.waitFor()
+
+            exitValue == 0 && response == "root_test"
+        } catch (e: Exception) {
+            Log.d("NmapScriptFragment", "Root check failed: ${e.message}")
+            false
+        }
+    }
+
+    private fun appendColoredText(text: String, isCommand: Boolean = false) {
+        val spannableBuilder = SpannableStringBuilder(outputText.text)
+
+        if (isCommand || text.startsWith(">")) {
+            // For command lines (starting with >), use red color
+            val redColor = ContextCompat.getColor(requireContext(), R.color.red)
+            val coloredText = SpannableString(text)
+            coloredText.setSpan(
+                ForegroundColorSpan(redColor),
+                0,
+                text.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannableBuilder.append(coloredText)
+        } else {
+            // Normal text, just append
+            spannableBuilder.append(text)
+        }
+
+        outputText.text = spannableBuilder
+    }
+
     private fun startNmapScan(target: String) {
         // First check if we have a directory URI
         if (directoryUri == null) {
@@ -168,9 +209,7 @@ class NmapScriptFragment : Fragment() {
 
         scanJob = coroutineScope.launch {
             try {
-
                 val currentDate = SimpleDateFormat("dd.MM.yyyy-HH.mm.ss", Locale.getDefault()).format(Date());
-
                 val fileName = "scan_${currentDate}.xml"
 
                 // Create a document file in the selected directory
@@ -188,11 +227,24 @@ class NmapScriptFragment : Fragment() {
                 // Create a temporary file to store the nmap output
                 val tempOutputFile = File(requireContext().cacheDir, fileName)
 
-                val command = "${nmapDir.absolutePath}/nmap -sV -A -oX ${tempOutputFile.absolutePath} $target"
+                // Check for root access and construct command accordingly
+                val isRooted = hasRootAccess()
+                val command = if (isRooted) {
+                    "su -c ${nmapDir.absolutePath}/nmap --system-dns $target -oX ${tempOutputFile.absolutePath}"
+                } else {
+                    "${nmapDir.absolutePath}/nmap --system-dns $target -oX ${tempOutputFile.absolutePath}"
+                }
+
+                Log.d("NmapScriptFragment", "Running command: $command with root: $isRooted")
 
                 withContext(Dispatchers.Main) {
-                    outputText.append("\n> Starting scan of $target\n")
-                    outputText.append("> Saving output to ${scanFile.name}\n")
+                    appendColoredText("\n> Starting scan of $target\n", true)
+                    appendColoredText("> Saving output to ${scanFile.name}\n", true)
+                    if (isRooted) {
+                        appendColoredText("> Running with root privileges\n", true)
+                    } else {
+                        appendColoredText("> Running without root privileges\n", true)
+                    }
                     scanButton.visibility = View.GONE
                     stopButton.visibility = View.VISIBLE
                     progressBar.visibility = View.VISIBLE
@@ -209,7 +261,7 @@ class NmapScriptFragment : Fragment() {
 
                 while (reader.readLine().also { line = it } != null) {
                     withContext(Dispatchers.Main) {
-                        outputText.append("\n$line")
+                        appendColoredText("\n$line")
                         progress = (progress + 1) % 100
                         progressBar.progress = progress
                     }
@@ -217,7 +269,7 @@ class NmapScriptFragment : Fragment() {
 
                 while (errorReader.readLine().also { line = it } != null) {
                     withContext(Dispatchers.Main) {
-                        outputText.append("\n$line")
+                        appendColoredText("\n$line")
                     }
                 }
 
@@ -235,14 +287,14 @@ class NmapScriptFragment : Fragment() {
                 }
 
                 withContext(Dispatchers.Main) {
-                    outputText.append("\n> Scan completed. Output saved to ${scanFile.name}\n")
+                    appendColoredText("\n> Scan completed. Output saved to ${scanFile.name}\n", true)
                     scanButton.visibility = View.VISIBLE
                     stopButton.visibility = View.GONE
                     progressBar.visibility = View.GONE
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    outputText.append("\nError: ${e.message}\n")
+                    appendColoredText("\nError: ${e.message}\n")
                     scanButton.visibility = View.VISIBLE
                     stopButton.visibility = View.GONE
                     progressBar.visibility = View.GONE
@@ -255,12 +307,21 @@ class NmapScriptFragment : Fragment() {
     private fun stopNmapScan() {
         scanJob?.cancel()
         if (::process.isInitialized) {
-            process.destroy()
+            try {
+                // Check if running with root, we need to kill process differently
+                if (hasRootAccess()) {
+                    // Try to get PID of running nmap process and kill it with root
+                    Runtime.getRuntime().exec("su -c pkill -f nmap")
+                }
+                process.destroy()
+            } catch (e: Exception) {
+                Log.e("NmapScriptFragment", "Error stopping scan: ${e.message}")
+            }
         }
         scanButton.visibility = View.VISIBLE
         stopButton.visibility = View.GONE
         progressBar.visibility = View.GONE
-        outputText.append("\n> Scan stopped by user\n")
+        appendColoredText("\n> Scan stopped by user\n", true)
     }
 
     private fun showDeleteXmlFileDialog() {
