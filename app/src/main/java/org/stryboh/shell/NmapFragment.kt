@@ -3,10 +3,8 @@ package org.stryboh.shell
 import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.graphics.Color
+import java.net.NetworkInterface
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.text.Spannable
 import android.text.SpannableString
@@ -16,7 +14,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ProgressBar
@@ -34,13 +31,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.File
-import java.io.IOException
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.*
 
-class NmapScriptFragment : Fragment() {
+class NmapFragment : Fragment() {
     private lateinit var outputText: TextView
     private lateinit var targetInput: EditText
     private lateinit var scanButton: ImageButton
@@ -69,7 +65,7 @@ class NmapScriptFragment : Fragment() {
 
             // Take persistent URI permission
             try {
-                savedUriString?.let { uriString ->
+                savedUriString.let { uriString ->
                     Uri.parse(uriString)?.let { uri ->
                         requireContext().contentResolver.takePersistableUriPermission(
                             uri,
@@ -78,7 +74,7 @@ class NmapScriptFragment : Fragment() {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("NmapScriptFragment", "Error taking persistent permission: ${e.message}")
+                Log.e("NmapFragment", "Error taking persistent permission: ${e.message}")
                 // If we can't get permission, clear the saved URI
                 directoryUri = null
                 prefs.edit().remove("SCAN_DIRECTORY_URI").apply()
@@ -98,7 +94,7 @@ class NmapScriptFragment : Fragment() {
                     requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
 
                     Toast.makeText(requireContext(), "Selected directory for scan results", Toast.LENGTH_SHORT).show()
-                    Log.d("NmapScriptFragment", "Directory URI: $uri")
+                    Log.d("NmapFragment", "Directory URI: $uri")
 
                     // Continue with scanning if this was called from scan operation
                     val target = targetInput.text.toString()
@@ -117,9 +113,10 @@ class NmapScriptFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        requireActivity().title = "Nmap Scripts"
-        val view = inflater.inflate(R.layout.layout_nmap_script, container, false)
 
+        val view = inflater.inflate(R.layout.layout_nmap, container, false)
+
+        requireActivity().title = "Nmap - ${getLocalIpAddress()}"
         outputText = view.findViewById(R.id.text_output)
         targetInput = view.findViewById(R.id.text_target)
         scanButton = view.findViewById(R.id.button_scan)
@@ -146,12 +143,7 @@ class NmapScriptFragment : Fragment() {
         }
 
         deleteButton.setOnClickListener {
-            if (directoryUri != null) {
-                showDeleteXmlFileDialog()
-            } else {
-                Toast.makeText(requireContext(), "Please select a directory first", Toast.LENGTH_SHORT).show()
-                showDirectoryPicker()
-            }
+            outputText.text = ""
         }
 
         return view
@@ -164,6 +156,25 @@ class NmapScriptFragment : Fragment() {
         directoryLauncher.launch(intent)
     }
 
+    private fun getLocalIpAddress(): String? {
+        return try {
+            val interfaces: List<NetworkInterface> =
+                NetworkInterface.getNetworkInterfaces().toList()
+            for (networkInterface in interfaces) {
+                val addresses = networkInterface.inetAddresses.toList()
+                for (address in addresses) {
+                    if (!address.isLoopbackAddress && address.isSiteLocalAddress) {
+                        return address.hostAddress
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun hasRootAccess(): Boolean {
         return try {
             val process = Runtime.getRuntime().exec("su -c echo root_test")
@@ -173,7 +184,7 @@ class NmapScriptFragment : Fragment() {
 
             exitValue == 0 && response == "root_test"
         } catch (e: Exception) {
-            Log.d("NmapScriptFragment", "Root check failed: ${e.message}")
+            Log.d("NmapFragment", "Root check failed: ${e.message}")
             false
         }
     }
@@ -209,7 +220,7 @@ class NmapScriptFragment : Fragment() {
 
         scanJob = coroutineScope.launch {
             try {
-                val currentDate = SimpleDateFormat("dd.MM.yyyy-HH.mm.ss", Locale.getDefault()).format(Date());
+                val currentDate = SimpleDateFormat("dd.MM.yyyy-HH.mm.ss", Locale.getDefault()).format(Date())
                 val fileName = "scan_${currentDate}.xml"
 
                 // Create a document file in the selected directory
@@ -235,7 +246,7 @@ class NmapScriptFragment : Fragment() {
                     "${nmapDir.absolutePath}/nmap --system-dns $target -oX ${tempOutputFile.absolutePath}"
                 }
 
-                Log.d("NmapScriptFragment", "Running command: $command with root: $isRooted")
+                Log.d("NmapFragment", "Running command: $command with root: $isRooted")
 
                 withContext(Dispatchers.Main) {
                     appendColoredText("\n> Starting scan of $target\n", true)
@@ -299,7 +310,7 @@ class NmapScriptFragment : Fragment() {
                     stopButton.visibility = View.GONE
                     progressBar.visibility = View.GONE
                 }
-                Log.e("NmapScriptFragment", "Error during scan: ${e.message}", e)
+                Log.e("NmapFragment", "Error during scan: ${e.message}", e)
             }
         }
     }
@@ -315,40 +326,13 @@ class NmapScriptFragment : Fragment() {
                 }
                 process.destroy()
             } catch (e: Exception) {
-                Log.e("NmapScriptFragment", "Error stopping scan: ${e.message}")
+                Log.e("NmapFragment", "Error stopping scan: ${e.message}")
             }
         }
         scanButton.visibility = View.VISIBLE
         stopButton.visibility = View.GONE
         progressBar.visibility = View.GONE
         appendColoredText("\n> Scan stopped by user\n", true)
-    }
-
-    private fun showDeleteXmlFileDialog() {
-        val documentFile = DocumentFile.fromTreeUri(requireContext(), directoryUri!!)
-        val xmlFiles = documentFile?.listFiles()?.filter { it.name?.endsWith(".xml") == true }
-
-        if (xmlFiles.isNullOrEmpty()) {
-            Toast.makeText(requireContext(), "No XML files found", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val fileNames = xmlFiles.map { it.name ?: "Unknown" }.toTypedArray()
-
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Delete XML File")
-            .setItems(fileNames) { _, which ->
-                deleteXmlFile(xmlFiles[which])
-            }
-            .show()
-    }
-
-    private fun deleteXmlFile(file: DocumentFile) {
-        if (file.delete()) {
-            Toast.makeText(requireContext(), "File deleted successfully", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(requireContext(), "Failed to delete file", Toast.LENGTH_SHORT).show()
-        }
     }
 
     override fun onDestroyView() {

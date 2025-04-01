@@ -31,6 +31,8 @@ import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 
 class GUIFragment : Fragment() {
 
@@ -497,7 +499,7 @@ class GUIFragment : Fragment() {
             // List XML files in the directory
             val xmlFiles = documentFile?.listFiles()?.filter {
                 it.name?.endsWith(".xml") == true
-            }
+            }?.toMutableList()
 
             if (xmlFiles.isNullOrEmpty()) {
                 Toast.makeText(
@@ -508,13 +510,15 @@ class GUIFragment : Fragment() {
                 return
             }
 
-            // Display file names in dialog
-            val fileNames = xmlFiles.map { it.name ?: "Unknown" }.toTypedArray()
+            // Create dialog with custom layout
+            val dialogView = layoutInflater.inflate(R.layout.dialog_nmap_files, null)
+            val recyclerView = dialogView.findViewById<RecyclerView>(R.id.files_recycler_view)
+            recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Select XML File to Import")
-                .setItems(fileNames) { _, which ->
-                    val selectedFile = xmlFiles[which]
+            // Create and set adapter
+            val adapter = NmapFileAdapter(
+                xmlFiles,
+                onFileClick = { selectedFile ->
                     try {
                         // Read the file content using ContentResolver
                         val inputStream = requireContext().contentResolver.openInputStream(selectedFile.uri)
@@ -537,7 +541,27 @@ class GUIFragment : Fragment() {
                         ).show()
                         Log.e("GUIFragment", "File reading error", e)
                     }
+                },
+                onDeleteClick = { file ->
+                    try {
+                        if (file.delete()) {
+                            Toast.makeText(requireContext(), "File deleted successfully", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(requireContext(), "Failed to delete file", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(requireContext(), "Error deleting file: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Log.e("GUIFragment", "File deletion error", e)
+                    }
                 }
+            )
+            recyclerView.adapter = adapter
+
+            // Show dialog
+            AlertDialog.Builder(requireContext())
+                .setTitle("Select XML File to Import")
+                .setView(dialogView)
+                .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
                 .show()
         } catch (e: Exception) {
             Toast.makeText(

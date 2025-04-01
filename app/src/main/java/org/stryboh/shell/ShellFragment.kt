@@ -12,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
-import java.io.File
 import java.io.InputStreamReader
 import android.text.Spannable
 import android.text.SpannableString
@@ -63,7 +62,6 @@ class ShellFragment : Fragment() {
         coroutineScope.launch {
 
             try {
-                val nmapDir = File(requireContext().filesDir, "nmap/bin")
                 val spannableBuilder = SpannableStringBuilder(outputText.text)
                 val redColor = context?.let { ContextCompat.getColor(it, R.color.red) }
                 val redText = SpannableString("\n>${ipText.text}")
@@ -76,21 +74,7 @@ class ShellFragment : Fragment() {
                 spannableBuilder.append(redText)
                 outputText.text = spannableBuilder
 
-                var toExec: String
-
-                if (command.contains("nmap"))
-                    toExec = command.replace("nmap", "${nmapDir.absolutePath}/nmap --system-dns")
-
-                else if(command.contains("ncat"))
-                    toExec  = command.replace("ncat", "${nmapDir.absolutePath}/ncat")
-
-                else if(command.contains("nping"))
-                    toExec = command.replace("nping", "${nmapDir.absolutePath}/nping")
-
-                else
-                    toExec = command
-
-                process = Runtime.getRuntime().exec(toExec)
+                process = Runtime.getRuntime().exec(command)
 
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val errorReader = BufferedReader(InputStreamReader(process.errorStream))

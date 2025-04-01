@@ -24,32 +24,44 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:padding="8dp">
 
             <EditText
                 android:id="@+id/text_target"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="Enter target (IP or hostname)"
+                android:hint="Enter nmap params with IP"
                 android:textColorHint="@color/lime"
                 android:textColor="@color/lime"
                 android:backgroundTint="@color/lime" />
+
+            <ImageButton
+                android:id="@+id/button_delete"
+                android:src="@drawable/ic_delete_red"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?android:selectableItemBackground"
+                android:scaleType="center"
+                android:padding="8dp" />
 
             <ImageButton
                 android:id="@+id/button_scan"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_run"
-                android:layout_marginStart="8dp" />
+                android:background="?android:selectableItemBackground"
+                android:padding="8dp" />
 
             <ImageButton
                 android:id="@+id/button_stop"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:src="@drawable/ic_stop"
-                android:layout_marginStart="8dp"
+                android:background="?android:selectableItemBackground"
+                android:padding="8dp"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -61,26 +73,5 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-<!--            <Button-->
-<!--                android:id="@+id/button_import"-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="1"-->
-<!--                android:text="Import" />-->
-
-        <ImageButton
-            android:id="@+id/button_delete"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:src="@drawable/ic_delete"
-            android:layout_marginStart="8dp" />
-        </LinearLayout>
     </LinearLayout>
-</LinearLayout> 
+</LinearLayout>
