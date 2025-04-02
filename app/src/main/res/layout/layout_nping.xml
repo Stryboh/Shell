@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <TextView
+        android:id="@+id/text_output"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp"
+        android:textColor="@color/lime"
+        android:scrollbars="vertical"
+        android:textIsSelectable="true" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <EditText
+                android:id="@+id/text_target"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Enter nping params with target"
+                android:textColorHint="@color/lime"
+                android:textColor="@color/lime"
+                android:backgroundTint="@color/lime" />
+
+            <ImageButton
+                android:id="@+id/button_delete"
+                android:src="@drawable/ic_delete_red"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?android:selectableItemBackground"
+                android:scaleType="center"
+                android:padding="8dp" />
+
+            <ImageButton
+                android:id="@+id/button_ping"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_run"
+                android:background="?android:selectableItemBackground"
+                android:padding="8dp" />
+
+            <ImageButton
+                android:id="@+id/button_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_stop"
+                android:background="?android:selectableItemBackground"
+                android:padding="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</LinearLayout> 

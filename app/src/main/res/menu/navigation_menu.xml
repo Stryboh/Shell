@@ -7,11 +7,19 @@
         android:icon="@drawable/ic_shell"
         android:title="Shell" />
     <item
+        android:id="@+id/nav_nmap"
+        android:icon="@drawable/ic_nmap"
+        android:title="Nmap" />
+    <item
+        android:id="@+id/nav_ncat"
+        android:icon="@drawable/ic_nmap"
+        android:title="Ncat" />
+    <item
+        android:id="@+id/nav_nping"
+        android:icon="@drawable/ic_nmap"
+        android:title="Nping" />
+    <item
         android:id="@+id/nav_gui"
         android:icon="@drawable/ic_gui"
         android:title="GUI" />
-    <item
-        android:id="@+id/nav_nmap"
-        android:icon="@drawable/ic_nmap"
-        android:title="Nmap Scripts" />
 </menu>
