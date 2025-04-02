@@ -5,21 +5,27 @@
     <item
         android:id="@+id/nav_shell"
         android:icon="@drawable/ic_shell"
+        android:iconTint="@color/lime"
         android:title="Shell" />
     <item
         android:id="@+id/nav_nmap"
         android:icon="@drawable/ic_nmap"
+        android:iconTint="@color/red"
+
         android:title="Nmap" />
     <item
         android:id="@+id/nav_ncat"
         android:icon="@drawable/ic_ncat"
+        android:iconTint="@color/lime"
         android:title="Ncat" />
     <item
         android:id="@+id/nav_nping"
         android:icon="@drawable/ic_nping"
+        android:iconTint="@color/lime"
         android:title="Nping" />
     <item
         android:id="@+id/nav_gui"
         android:icon="@drawable/ic_gui"
+        android:iconTint="@color/lime"
         android:title="GUI" />
 </menu>
