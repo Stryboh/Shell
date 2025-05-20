@@ -12,7 +12,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 
 class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
-    val lines = mutableListOf<Pair<Host, Host>>()
+
     private val paintLine =
         Paint().apply {
             color = Color.RED
@@ -167,6 +167,7 @@ class HostView(context: Context, attrs: AttributeSet) : View(context, attrs) {
 
     companion object {
         val hosts = mutableListOf<Host>()
+        val lines = mutableListOf<Pair<Host, Host>>()
 
         fun parseNmapXml(xmlInput: String, context: Context): List<Host> {
             val factory = XmlPullParserFactory.newInstance()

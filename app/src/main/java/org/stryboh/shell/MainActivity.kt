@@ -47,6 +47,10 @@ class MainActivity : AppCompatActivity() {
                     loadFragment(NcatFragment())
                     true
                 }
+                R.id.nav_autoscan-> {
+                    loadFragment(AutoscanFragment())
+                    true
+                }
                 R.id.nav_nping-> {
                     loadFragment(NpingFragment())
                     true

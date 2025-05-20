@@ -598,7 +598,7 @@ class GUIFragment : Fragment() {
                 .setMessage("Found ${hosts.size} hosts. Do you want to clear existing hosts?")
                 .setPositiveButton("Yes") { _, _ ->
                     HostView.hosts.clear()
-                    hostView.lines.clear()
+                    HostView.lines.clear()
                     addImportedHosts(hosts)
                 }
                 .setNegativeButton("No") { _, _ ->
@@ -840,7 +840,7 @@ class GUIFragment : Fragment() {
                 }
                 db.insert(DatabaseHelper.TABLE_HOSTS, null, values)
             }
-            for (link in hostView.lines) {
+            for (link in HostView.lines) {
                 val values = ContentValues().apply {
                     put(DatabaseHelper.COLUMN_TOPOLOGY_NAME, fileName)
                     put(DatabaseHelper.COLUMN_HOST_ID1, link.first.id)
@@ -881,7 +881,7 @@ class GUIFragment : Fragment() {
                 return
             }
             HostView.hosts.clear()
-            hostView.lines.clear()
+            HostView.lines.clear()
             do {
                 val hostId = hostsCursor.getInt(hostsCursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_HOST_ID))
                 val host = HostView.Host(
@@ -995,9 +995,9 @@ class GUIFragment : Fragment() {
                 $COLUMN_HOST_ID INTEGER NOT NULL,
                 $COLUMN_X REAL NOT NULL,
                 $COLUMN_Y REAL NOT NULL,
-                $COLUMN_HOST_NAME TEXT NOT NULL,
-                $COLUMN_HOST_IP TEXT NOT NULL,
-                $COLUMN_HOST_INFO TEXT NOT NULL,
+                $COLUMN_HOST_NAME TEXT,
+                $COLUMN_HOST_IP TEXT,
+                $COLUMN_HOST_INFO TEXT,
                 $COLUMN_HOST_STATUS TEXT,
                 $COLUMN_OS_INFO TEXT,
                 $COLUMN_PORTS TEXT,

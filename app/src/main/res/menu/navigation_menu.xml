@@ -22,9 +22,17 @@
         android:icon="@drawable/ic_nping"
         android:iconTint="@color/lime"
         android:title="Nping" />
+
+    <item
+        android:id="@+id/nav_autoscan"
+        android:icon="@drawable/ic_autoscan"
+        android:iconTint="@color/lime"
+        android:title="Autoscan" />
+
     <item
         android:id="@+id/nav_gui"
         android:icon="@drawable/ic_gui"
         android:iconTint="@color/lime"
         android:title="GUI" />
+
 </menu>
